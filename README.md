@@ -31,6 +31,14 @@ import { Placeholder } from "placeholder-kit"
 <Placeholder size={200} bg="#7c3aed" />
 ```
 
+the component reads its actual size from css automatically. if you dont pass width/height it fills the parent and shows the real dimensions.
+
+```jsx
+<div style={{ width: 400, height: 250 }}>
+  <Placeholder />
+</div>
+```
+
 ## placeholder() function
 
 returns a data uri you can use anywhere a image url works.
@@ -42,7 +50,7 @@ placeholder(size, bg?, options?)
 | param | type | default | what it does |
 |-------|------|---------|--------------|
 | `size` | `string \| number` | - | `"400x250"` or `200` for square |
-| `bg` | `string` | `"#e2e8f0"` | background color hex |
+| `bg` | `string` | `"#ffffff"` | background color hex |
 | `options.text` | `string` | auto | custom text, otherwise shows dimensions |
 | `options.radius` | `number` | `0` | border radius |
 | `options.iconOpacity` | `number` | `0.35` | icon opacity |
@@ -53,11 +61,15 @@ placeholder(size, bg?, options?)
 | prop | type | default | what it does |
 |------|------|---------|--------------|
 | `size` | `string \| number` | - | `"400x250"` or `200`, auto shows dimensions |
-| `bg` | `string` | `"#e2e8f0"` | background color |
+| `width` | `number` | - | explicit width in px |
+| `height` | `number` | - | explicit height in px |
+| `bg` | `string` | `"#ffffff"` | background color |
 | `radius` | `number` | `0` | border radius |
 | `text` | `string` | auto | custom text |
 | `iconOpacity` | `number` | `0.35` | icon opacity |
 | `textOpacity` | `number` | `0.5` | text opacity |
+
+if no size/width/height given, it goes 100% width and height and reads the actual rendered size from the dom.
 
 ## auto contrast
 

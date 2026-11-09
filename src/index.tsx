@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef, useState, useEffect } from "react";
 
 const IMAGE_ICON_PATH =
   "M5.03226 0C2.25301 0 0 2.25301 0 5.03226V18.9677C0 19.9607 0.287566 20.8863 0.783964 21.6663L9.61127 13.3517C10.953 12.0879 13.047 12.0879 14.3887 13.3517L23.2159 21.6664C23.7125 20.8865 24 19.9607 24 18.9677V5.03226C24 2.25301 21.7469 0 18.9677 0H5.03226ZM16.6452 9.29032C15.5762 9.29032 14.7097 8.42378 14.7097 7.35484C14.7097 6.28589 15.5762 5.41935 16.6452 5.41935C17.7142 5.41935 18.5806 6.28589 18.5806 7.35484C18.5806 8.42378 17.7142 9.29032 16.6452 9.29032ZM5.03226 24C4.08818 24 3.20482 23.74 2.44987 23.2877L11.2037 15.0424C11.651 14.6211 12.349 14.6211 12.7962 15.0424L21.55 23.2879C20.795 23.74 19.9118 24 18.9677 24H5.03226Z";
@@ -85,7 +85,7 @@ export function placeholder(
   options?: PlaceholderOptions
 ): string {
   const { w, h } = parseSize(size);
-  const svg = buildSvg(w, h, bg ?? "#e2e8f0", options);
+  const svg = buildSvg(w, h, bg ?? "#ffffff", options);
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
 
@@ -94,14 +94,11 @@ interface PlaceholderProps {
   width?: number;
   height?: number;
   bg?: string;
-  backgroundColor?: string;
   iconOpacity?: number;
   textOpacity?: number;
   text?: string;
-  showDimensions?: boolean;
   fontSize?: number;
   radius?: number;
-  borderRadius?: number;
   className?: string;
   style?: React.CSSProperties;
 }
@@ -110,52 +107,63 @@ export function Placeholder({
   size,
   width,
   height,
-  bg,
-  backgroundColor,
+  bg = "#ffffff",
   iconOpacity = 0.35,
   textOpacity = 0.5,
   text,
-  showDimensions = false,
   fontSize,
-  radius,
-  borderRadius,
+  radius = 0,
   className,
   style,
 }: PlaceholderProps) {
-  const parsed = size != null ? parseSize(size) : null;
-  const w = width ?? parsed?.w ?? 300;
-  const h = height ?? parsed?.h ?? w;
-  const bgColor = bg ?? backgroundColor ?? "#e2e8f0";
-  const rad = radius ?? borderRadius ?? 0;
+  const ref = useRef<SVGSVGElement>(null);
+  const [measured, setMeasured] = useState<{ w: number; h: number } | null>(null);
 
-  const hasSizeShorthand = size != null;
+  const parsed = size != null ? parseSize(size) : null;
+  const explicitW = width ?? parsed?.w;
+  const explicitH = height ?? parsed?.h;
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const update = () => {
+      const rect = el.getBoundingClientRect();
+      setMeasured({ w: Math.round(rect.width), h: Math.round(rect.height) });
+    };
+
+    update();
+
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const w = measured?.w ?? explicitW ?? 300;
+  const h = measured?.h ?? explicitH ?? 150;
   const minDim = Math.min(w, h);
   const iconSize = Math.max(16, minDim * 0.25);
   const computedFontSize = fontSize ?? Math.max(10, minDim * 0.065);
+  const displayText = text ?? `${w}×${h}`;
+  const iconColor = contrastColor(bg, iconOpacity);
+  const textColor = contrastColor(bg, textOpacity);
 
-  const displayText =
-    text ??
-    (showDimensions || hasSizeShorthand ? `${w}×${h}` : undefined);
-
-  const iconColor = contrastColor(bgColor, iconOpacity);
-  const textColor = contrastColor(bgColor, textOpacity);
-
-  const iconY = displayText
-    ? (h - iconSize) / 2 - computedFontSize * 0.6
-    : (h - iconSize) / 2;
+  const iconY = (h - iconSize) / 2 - computedFontSize * 0.6;
 
   return (
     <svg
+      ref={ref}
       xmlns="http://www.w3.org/2000/svg"
-      width={w}
-      height={h}
+      width={explicitW ?? "100%"}
+      height={explicitH ?? "100%"}
       viewBox={`0 0 ${w} ${h}`}
+      preserveAspectRatio="none"
       role="img"
-      aria-label={displayText ? `Placeholder ${displayText}` : "Placeholder image"}
+      aria-label={`Placeholder ${displayText}`}
       className={className}
       style={style}
     >
-      <rect width={w} height={h} fill={bgColor} rx={rad} ry={rad} />
+      <rect width={w} height={h} fill={bg} rx={radius} ry={radius} />
 
       <g transform={`translate(${(w - iconSize) / 2}, ${iconY})`}>
         <g transform={`scale(${iconSize / 24})`}>
@@ -163,21 +171,19 @@ export function Placeholder({
         </g>
       </g>
 
-      {displayText && (
-        <text
-          x={w / 2}
-          y={(h + iconSize) / 2 + computedFontSize * 0.7}
-          textAnchor="middle"
-          dominantBaseline="central"
-          fill={textColor}
-          fontFamily="system-ui, -apple-system, sans-serif"
-          fontSize={computedFontSize}
-          fontWeight={600}
-          letterSpacing="0.02em"
-        >
-          {displayText}
-        </text>
-      )}
+      <text
+        x={w / 2}
+        y={(h + iconSize) / 2 + computedFontSize * 0.7}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fill={textColor}
+        fontFamily="system-ui, -apple-system, sans-serif"
+        fontSize={computedFontSize}
+        fontWeight={600}
+        letterSpacing="0.02em"
+      >
+        {displayText}
+      </text>
     </svg>
   );
 }
